@@ -55,6 +55,14 @@ public class PlayerClueService extends ServiceImpl<PlayerClueMapper, PlayerClue>
             vo.setParentId(clue.getParentId());
             vo.setIsUnlocked(pc.getIsUnlocked());
             vo.setHasChildren(clueService.hasChildren(pc.getClueId()));
+            vo.setIsPuzzle(clue.getIsPuzzle());
+            vo.setPuzzleStatus(pc.getPuzzleStatus());
+            vo.setPuzzleRows(clue.getPuzzleRows());
+            vo.setPuzzleCols(clue.getPuzzleCols());
+            vo.setPuzzleTimeLimit(clue.getPuzzleTimeLimit());
+            if (pc.getPuzzleStartTime() != null) {
+                vo.setPuzzleStartTime(pc.getPuzzleStartTime().toString());
+            }
             if (pc.getIsUnlocked() == 1) {
                 vo.setContent(clue.getContent());
                 vo.setResourceUrl(clue.getResourceUrl());
@@ -87,6 +95,14 @@ public class PlayerClueService extends ServiceImpl<PlayerClueMapper, PlayerClue>
         vo.setParentId(clue.getParentId());
         vo.setIsUnlocked(pc.getIsUnlocked());
         vo.setHasChildren(clueService.hasChildren(clueId));
+        vo.setIsPuzzle(clue.getIsPuzzle());
+        vo.setPuzzleStatus(pc.getPuzzleStatus());
+        vo.setPuzzleRows(clue.getPuzzleRows());
+        vo.setPuzzleCols(clue.getPuzzleCols());
+        vo.setPuzzleTimeLimit(clue.getPuzzleTimeLimit());
+        if (pc.getPuzzleStartTime() != null) {
+            vo.setPuzzleStartTime(pc.getPuzzleStartTime().toString());
+        }
         if (pc.getIsUnlocked() == 1) {
             vo.setContent(clue.getContent());
             vo.setResourceUrl(clue.getResourceUrl());

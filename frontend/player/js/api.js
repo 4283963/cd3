@@ -253,5 +253,17 @@ const api = {
 
     heartbeat() {
         return request.post('/player/heartbeat');
+    },
+
+    startPuzzle(playerClueId) {
+        return request.post('/player/puzzle/start', { playerClueId });
+    },
+
+    movePuzzlePiece(playerClueId, pieceIndex) {
+        return request.post('/player/puzzle/move', { playerClueId, pieceIndex });
+    },
+
+    getPuzzleState(playerClueId) {
+        return request.get(`/player/puzzle/state/${playerClueId}`);
     }
 };

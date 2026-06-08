@@ -455,6 +455,10 @@ const ScriptDetail = {
                                         <el-tag size="small" class="clue-type-badge" :type="clueTypeColor(data.type)">
                                             {{ clueTypeText(data.type) }}
                                         </el-tag>
+                                        <el-tag v-if="data.isPuzzle === 1" size="small" 
+                                                style="margin-left: 4px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none;">
+                                            🧩 拼图
+                                        </el-tag>
                                         <el-tag v-if="data.isPublic" size="small" type="success" style="margin-left: 4px;">
                                             公开
                                         </el-tag>
@@ -782,6 +786,10 @@ const SessionControl = {
                                             {{ data.name }}
                                             <el-tag size="small" style="margin-left: 8px;" :type="clueTypeColor(data.type)">
                                                 {{ clueTypeText(data.type) }}
+                                            </el-tag>
+                                            <el-tag v-if="data.isPuzzle === 1" size="small" 
+                                                    style="margin-left: 4px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none;">
+                                                🧩 拼图
                                             </el-tag>
                                         </span>
                                     </template>

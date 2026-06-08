@@ -29,6 +29,12 @@ public class PlayerClue implements Serializable {
 
     private LocalDateTime distributeTime;
 
+    private Integer puzzleStatus;
+
+    private LocalDateTime puzzleStartTime;
+
+    private String puzzleCurrent;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
@@ -95,6 +101,30 @@ public class PlayerClue implements Serializable {
 
     public void setDistributeTime(LocalDateTime distributeTime) {
         this.distributeTime = distributeTime;
+    }
+
+    public Integer getPuzzleStatus() {
+        return puzzleStatus;
+    }
+
+    public void setPuzzleStatus(Integer puzzleStatus) {
+        this.puzzleStatus = puzzleStatus;
+    }
+
+    public LocalDateTime getPuzzleStartTime() {
+        return puzzleStartTime;
+    }
+
+    public void setPuzzleStartTime(LocalDateTime puzzleStartTime) {
+        this.puzzleStartTime = puzzleStartTime;
+    }
+
+    public String getPuzzleCurrent() {
+        return puzzleCurrent;
+    }
+
+    public void setPuzzleCurrent(String puzzleCurrent) {
+        this.puzzleCurrent = puzzleCurrent;
     }
 
     public LocalDateTime getCreateTime() {

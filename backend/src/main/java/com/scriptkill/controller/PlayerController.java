@@ -43,6 +43,9 @@ public class PlayerController {
     private DirectorMessageService directorMessageService;
 
     @Autowired
+    private PuzzleService puzzleService;
+
+    @Autowired
     private JwtUtil jwtUtil;
 
     private Long getCurrentPlayerId(HttpServletRequest request) {
@@ -174,5 +177,55 @@ public class PlayerController {
         Long playerId = getCurrentPlayerId(request);
         playerService.heartbeat(playerId);
         return Result.success(true);
+    }
+
+    @PostMapping("/puzzle/start")
+    public Result<Map<String, Object>> startPuzzle(@RequestBody Map<String, Long> body, HttpServletRequest request) {
+        Long playerId = getCurrentPlayerId(request);
+        Long playerClueId = body.get("playerClueId");
+        if (playerClueId == null) {
+            throw new BusinessException("参数错误");
+        }
+        PlayerClue pc = puzzleService.startPuzzle(playerId, playerClueId);
+        List<Integer> puzzle = puzzleService.getPuzzleState(playerId, playerClueId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("playerClueId", pc.getId());
+        result.put("puzzleStatus", pc.getPuzzleStatus());
+        result.put("puzzleStartTime", pc.getPuzzleStartTime());
+        result.put("puzzle", puzzle);
+        return Result.success(result);
+    }
+
+    @PostMapping("/puzzle/move")
+    public Result<Map<String, Object>> movePuzzle(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+        Long playerId = getCurrentPlayerId(request);
+        Long playerClueId = ((Number) body.get("playerClueId")).longValue();
+        int pieceIndex = ((Number) body.get("pieceIndex")).intValue();
+        PlayerClue pc = puzzleService.movePuzzle(playerId, playerClueId, pieceIndex);
+        List<Integer> puzzle = puzzleService.getPuzzleState(playerId, playerClueId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("playerClueId", pc.getId());
+        result.put("puzzleStatus", pc.getPuzzleStatus());
+        result.put("puzzle", puzzle);
+        result.put("isUnlocked", pc.getIsUnlocked());
+        if (pc.getIsUnlocked() == 1) {
+            PlayerClueVO clue = playerClueService.getPlayerClueDetail(playerId, pc.getClueId());
+            result.put("clue", clue);
+        }
+        return Result.success(result);
+    }
+
+    @GetMapping("/puzzle/state/{playerClueId}")
+    public Result<Map<String, Object>> getPuzzleState(@PathVariable Long playerClueId, HttpServletRequest request) {
+        Long playerId = getCurrentPlayerId(request);
+        List<Integer> puzzle = puzzleService.getPuzzleState(playerId, playerClueId);
+        boolean timeout = puzzleService.checkTimeout(playerClueId);
+        PlayerClue pc = playerClueService.getById(playerClueId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("puzzle", puzzle);
+        result.put("puzzleStatus", pc.getPuzzleStatus());
+        result.put("puzzleStartTime", pc.getPuzzleStartTime());
+        result.put("timeout", timeout);
+        return Result.success(result);
     }
 }

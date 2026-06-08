@@ -436,11 +436,20 @@ const CluesPage = {
                                 <span class="clue-type-badge" :class="'type-' + typeClass(clue.type)">
                                     {{ typeText(clue.type) }}
                                 </span>
+                                <span v-if="clue.isPuzzle === 1" class="clue-type-badge type-puzzle" style="margin-left: 4px;">
+                                    🧩 拼图
+                                </span>
                                 {{ clue.name }}
                             </div>
                             <div class="clue-desc">
                                 <template v-if="clue.isUnlocked === 1">
                                     点击查看详情
+                                </template>
+                                <template v-else-if="clue.isPuzzle === 1 && clue.puzzleStatus === 3">
+                                    ⚠️ 线索已销毁
+                                </template>
+                                <template v-else-if="clue.isPuzzle === 1">
+                                    {{ clue.unlockHint || '完成拼图解锁' }}
                                 </template>
                                 <template v-else>
                                     {{ clue.unlockHint || '需要密码解锁' }}
@@ -572,6 +581,9 @@ const ClueDetailPage = {
                         <span class="clue-type-badge" :class="'type-' + typeClass(clue.type)" style="margin-bottom: 10px;">
                             {{ typeText(clue.type) }}
                         </span>
+                        <span v-if="clue.isPuzzle === 1" class="clue-type-badge type-puzzle" style="margin-left: 8px; margin-bottom: 10px;">
+                            🧩 拼图解锁
+                        </span>
                         <h2 style="font-size: 18px; font-weight: bold; margin-top: 8px;">
                             {{ clue.name }}
                         </h2>
@@ -606,9 +618,68 @@ const ClueDetailPage = {
                         </div>
                     </template>
 
+                    <template v-else-if="clue.isPuzzle === 1 && clue.puzzleStatus === 3">
+                        <div class="unlock-section">
+                            <div class="unlock-icon">�</div>
+                            <div class="unlock-title">线索已销毁</div>
+                            <div class="unlock-hint">很遗憾，你没能在规定时间内完成拼图，线索已自动销毁。</div>
+                        </div>
+                    </template>
+
+                    <template v-else-if="clue.isPuzzle === 1">
+                        <div class="puzzle-section">
+                            <div v-if="!puzzleStarted" class="unlock-section">
+                                <div class="unlock-icon">🧩</div>
+                                <div class="unlock-title">拼图解锁</div>
+                                <div class="unlock-hint">{{ clue.unlockHint || '完成拼图即可解锁线索' }}</div>
+                                <div style="color: #ff6034; font-size: 13px; margin: 12px 0;">
+                                    ⏱ 限时 {{ formatTime(clue.puzzleTimeLimit || 180) }}，超时线索将自动销毁
+                                </div>
+                                <van-button type="primary" block round @click="startPuzzle">
+                                    开始拼图
+                                </van-button>
+                            </div>
+
+                            <div v-else>
+                                <div class="puzzle-timer" :class="{ warning: remainTime < 60, danger: remainTime < 30 }">
+                                    <van-icon name="clock-o" />
+                                    <span style="margin-left: 6px;">剩余时间：{{ formatTime(remainTime) }}</span>
+                                </div>
+
+                                <div class="puzzle-board" :style="boardStyle">
+                                    <div
+                                        v-for="(piece, index) in puzzlePieces"
+                                        :key="index"
+                                        class="puzzle-piece"
+                                        :class="{ empty: piece === emptyValue, movable: isMovable(index) }"
+                                        :style="getPieceStyle(piece, index)"
+                                        @click="movePiece(index)"
+                                    >
+                                        <span v-if="piece !== emptyValue" class="piece-number">{{ piece + 1 }}</span>
+                                    </div>
+                                </div>
+
+                                <div style="text-align: center; color: #999; font-size: 12px; margin-top: 12px;">
+                                    点击空白格旁边的方块进行移动
+                                </div>
+
+                                <div v-if="clue.resourceUrl" style="margin-top: 16px; text-align: center;">
+                                    <div style="font-size: 12px; color: #999; margin-bottom: 6px;">完成后将显示：</div>
+                                    <van-image
+                                        width="80"
+                                        height="80"
+                                        :src="clue.resourceUrl"
+                                        fit="cover"
+                                        style="filter: blur(6px); opacity: 0.5; border-radius: 8px;"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
                     <template v-else>
                         <div class="unlock-section">
-                            <div class="unlock-icon">🔒</div>
+                            <div class="unlock-icon">��</div>
                             <div class="unlock-title">线索已锁定</div>
                             <div class="unlock-hint">{{ clue.unlockHint || '找到密码后即可解锁' }}</div>
                             <van-field
@@ -631,6 +702,12 @@ const ClueDetailPage = {
         const loading = ref(true);
         const unlockPassword = ref('');
 
+        const puzzleStarted = ref(false);
+        const puzzlePieces = ref([]);
+        const remainTime = ref(180);
+        const emptyValue = ref(8);
+        let timer = null;
+
         const typeText = (type) => {
             const map = { 1: '文字线索', 2: '图片线索', 3: '音频线索', 4: '视频线索' };
             return map[type] || '文字线索';
@@ -645,12 +722,128 @@ const ClueDetailPage = {
             return clue.value.content.split('\n').filter(p => p.trim());
         });
 
+        const boardStyle = computed(() => {
+            const rows = clue.value?.puzzleRows || 3;
+            const cols = clue.value?.puzzleCols || 3;
+            emptyValue.value = rows * cols - 1;
+            return {
+                gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                gridTemplateRows: `repeat(${rows}, 1fr)`
+            };
+        });
+
+        const formatTime = (seconds) => {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        };
+
+        const getPieceStyle = (piece, index) => {
+            if (piece === emptyValue.value) return {};
+            const cols = clue.value?.puzzleCols || 3;
+            const total = (clue.value?.puzzleRows || 3) * cols;
+            const col = piece % cols;
+            const row = Math.floor(piece / cols);
+            const imgUrl = clue.value?.resourceUrl;
+            if (imgUrl) {
+                return {
+                    backgroundImage: `url(${imgUrl})`,
+                    backgroundSize: `${cols * 100}%`,
+                    backgroundPosition: `${(col / (cols - 1)) * 100}% ${(row / ((total / cols) - 1)) * 100}%`
+                };
+            }
+            return {};
+        };
+
+        const isMovable = (index) => {
+            const cols = clue.value?.puzzleCols || 3;
+            const rows = clue.value?.puzzleRows || 3;
+            const emptyIndex = puzzlePieces.value.indexOf(emptyValue.value);
+            const r1 = Math.floor(index / cols);
+            const c1 = index % cols;
+            const r2 = Math.floor(emptyIndex / cols);
+            const c2 = emptyIndex % cols;
+            return (Math.abs(r1 - r2) === 1 && c1 === c2) ||
+                   (Math.abs(c1 - c2) === 1 && r1 === r2);
+        };
+
+        const movePiece = async (index) => {
+            if (!isMovable(index)) return;
+            try {
+                const res = await api.movePuzzlePiece(clue.value.id, index);
+                if (res?.puzzle) {
+                    puzzlePieces.value = res.puzzle;
+                    if (res.isUnlocked === 1) {
+                        clearInterval(timer);
+                        vant.showToast({ message: '🎉 恭喜完成！线索已解锁', icon: 'success', duration: 2000 });
+                        setTimeout(() => {
+                            loadDetail();
+                        }, 1500);
+                    }
+                }
+            } catch (e) {
+                if (e?.message?.includes('时间已到')) {
+                    clearInterval(timer);
+                    vant.showToast({ message: '时间已到，线索已销毁', icon: 'fail', duration: 2000 });
+                    setTimeout(() => {
+                        loadDetail();
+                    }, 1500);
+                }
+            }
+        };
+
+        const startPuzzle = async () => {
+            try {
+                const res = await api.startPuzzle(clue.value.id);
+                if (res?.puzzle) {
+                    puzzlePieces.value = res.puzzle;
+                    puzzleStarted.value = true;
+                    remainTime.value = clue.value?.puzzleTimeLimit || 180;
+                    startTimer();
+                }
+            } catch (e) {
+                vant.showToast('启动拼图失败');
+            }
+        };
+
+        const startTimer = () => {
+            if (timer) clearInterval(timer);
+            timer = setInterval(async () => {
+                remainTime.value--;
+                if (remainTime.value <= 0) {
+                    clearInterval(timer);
+                    vant.showToast({ message: '时间已到，线索已销毁', icon: 'fail', duration: 2000 });
+                    setTimeout(() => {
+                        loadDetail();
+                    }, 1500);
+                }
+            }, 1000);
+        };
+
         const loadDetail = async () => {
             loading.value = true;
             try {
                 const id = route.params.id;
                 const res = await api.getClueDetail(id);
                 clue.value = res;
+                if (res?.isPuzzle === 1 && res?.puzzleStatus === 1) {
+                    try {
+                        const state = await api.getPuzzleState(res.id);
+                        if (state?.puzzle) {
+                            puzzlePieces.value = state.puzzle;
+                            puzzleStarted.value = true;
+                            if (state.puzzleStartTime) {
+                                const start = new Date(state.puzzleStartTime).getTime();
+                                const now = Date.now();
+                                const elapsed = Math.floor((now - start) / 1000);
+                                remainTime.value = Math.max(0, (res.puzzleTimeLimit || 180) - elapsed);
+                                if (remainTime.value > 0 && !state.timeout) {
+                                    startTimer();
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                }
             } catch (e) {
             } finally {
                 loading.value = false;
@@ -690,9 +883,16 @@ const ClueDetailPage = {
 
         onMounted(loadDetail);
 
+        onUnmounted(() => {
+            if (timer) clearInterval(timer);
+        });
+
         return {
             clue, loading, unlockPassword, paragraphs,
-            typeText, typeClass, goBack, unlockClue, viewChildren, previewImage
+            typeText, typeClass, goBack, unlockClue, viewChildren, previewImage,
+            puzzleStarted, puzzlePieces, remainTime, emptyValue,
+            boardStyle, formatTime, getPieceStyle, isMovable,
+            startPuzzle, movePiece
         };
     }
 };

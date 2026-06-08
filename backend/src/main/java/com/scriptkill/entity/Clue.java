@@ -39,6 +39,14 @@ public class Clue implements Serializable {
 
     private Integer sortOrder;
 
+    private Integer isPuzzle;
+
+    private Integer puzzleRows;
+
+    private Integer puzzleCols;
+
+    private Integer puzzleTimeLimit;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
@@ -145,6 +153,38 @@ public class Clue implements Serializable {
 
     public void setSortOrder(Integer sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public Integer getIsPuzzle() {
+        return isPuzzle;
+    }
+
+    public void setIsPuzzle(Integer isPuzzle) {
+        this.isPuzzle = isPuzzle;
+    }
+
+    public Integer getPuzzleRows() {
+        return puzzleRows;
+    }
+
+    public void setPuzzleRows(Integer puzzleRows) {
+        this.puzzleRows = puzzleRows;
+    }
+
+    public Integer getPuzzleCols() {
+        return puzzleCols;
+    }
+
+    public void setPuzzleCols(Integer puzzleCols) {
+        this.puzzleCols = puzzleCols;
+    }
+
+    public Integer getPuzzleTimeLimit() {
+        return puzzleTimeLimit;
+    }
+
+    public void setPuzzleTimeLimit(Integer puzzleTimeLimit) {
+        this.puzzleTimeLimit = puzzleTimeLimit;
     }
 
     public LocalDateTime getCreateTime() {

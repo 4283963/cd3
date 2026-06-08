@@ -28,6 +28,18 @@ public class PlayerClueVO implements Serializable {
 
     private Boolean hasChildren;
 
+    private Integer isPuzzle;
+
+    private Integer puzzleStatus;
+
+    private String puzzleStartTime;
+
+    private Integer puzzleTimeLimit;
+
+    private Integer puzzleRows;
+
+    private Integer puzzleCols;
+
     public Long getId() {
         return id;
     }
@@ -114,5 +126,53 @@ public class PlayerClueVO implements Serializable {
 
     public void setHasChildren(Boolean hasChildren) {
         this.hasChildren = hasChildren;
+    }
+
+    public Integer getIsPuzzle() {
+        return isPuzzle;
+    }
+
+    public void setIsPuzzle(Integer isPuzzle) {
+        this.isPuzzle = isPuzzle;
+    }
+
+    public Integer getPuzzleStatus() {
+        return puzzleStatus;
+    }
+
+    public void setPuzzleStatus(Integer puzzleStatus) {
+        this.puzzleStatus = puzzleStatus;
+    }
+
+    public String getPuzzleStartTime() {
+        return puzzleStartTime;
+    }
+
+    public void setPuzzleStartTime(String puzzleStartTime) {
+        this.puzzleStartTime = puzzleStartTime;
+    }
+
+    public Integer getPuzzleTimeLimit() {
+        return puzzleTimeLimit;
+    }
+
+    public void setPuzzleTimeLimit(Integer puzzleTimeLimit) {
+        this.puzzleTimeLimit = puzzleTimeLimit;
+    }
+
+    public Integer getPuzzleRows() {
+        return puzzleRows;
+    }
+
+    public void setPuzzleRows(Integer puzzleRows) {
+        this.puzzleRows = puzzleRows;
+    }
+
+    public Integer getPuzzleCols() {
+        return puzzleCols;
+    }
+
+    public void setPuzzleCols(Integer puzzleCols) {
+        this.puzzleCols = puzzleCols;
     }
 }
