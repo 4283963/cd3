@@ -1,11 +1,8 @@
 package com.scriptkill.common;
 
-import lombok.Data;
-
 import java.io.Serializable;
 import java.util.List;
 
-@Data
 public class PageResult<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -30,6 +27,38 @@ public class PageResult<T> implements Serializable {
         this.total = total;
         this.records = records;
         this.current = current;
+        this.size = size;
+    }
+
+    public Long getTotal() {
+        return total;
+    }
+
+    public void setTotal(Long total) {
+        this.total = total;
+    }
+
+    public List<T> getRecords() {
+        return records;
+    }
+
+    public void setRecords(List<T> records) {
+        this.records = records;
+    }
+
+    public Long getCurrent() {
+        return current;
+    }
+
+    public void setCurrent(Long current) {
+        this.current = current;
+    }
+
+    public Long getSize() {
+        return size;
+    }
+
+    public void setSize(Long size) {
         this.size = size;
     }
 }

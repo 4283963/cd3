@@ -469,3 +469,19 @@ html, body {
 .bottom-safe-area {
     height: env(safe-area-inset-bottom);
 }
+
+.tab-badge {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    min-width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    font-size: 10px;
+    color: #fff;
+    background: #ff4d4f;
+    border-radius: 8px;
+    padding: 0 4px;
+    z-index: 10;
+}

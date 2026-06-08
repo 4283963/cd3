@@ -3,6 +3,9 @@ package com.scriptkill.service;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.scriptkill.entity.DirectorMessage;
 import com.scriptkill.mapper.DirectorMessageMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -10,6 +13,11 @@ import java.util.stream.Collectors;
 
 @Service
 public class DirectorMessageService extends ServiceImpl<DirectorMessageMapper, DirectorMessage> {
+
+    private static final Logger log = LoggerFactory.getLogger(DirectorMessageService.class);
+
+    @Autowired
+    private WebSocketPushService webSocketPushService;
 
     public List<DirectorMessage> getSessionMessages(Long sessionId) {
         return baseMapper.selectBySessionId(sessionId);
@@ -33,6 +41,13 @@ public class DirectorMessageService extends ServiceImpl<DirectorMessageMapper, D
         msg.setContent(content);
         msg.setIsRead(0);
         save(msg);
+
+        try {
+            webSocketPushService.pushMessage(sessionId, msg);
+        } catch (Exception e) {
+            log.warn("消息WebSocket推送失败: sessionId={}", sessionId, e);
+        }
+
         return msg;
     }
 }

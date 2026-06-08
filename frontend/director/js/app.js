@@ -1103,14 +1103,64 @@ const SessionControl = {
         };
 
         let refreshTimer = null;
+        const wsConnected = ref(false);
+        const wsReconnectCount = ref(0);
+
+        const initWebSocket = async () => {
+            const sessionId = route.params.id;
+            if (!sessionId) return;
+
+            try {
+                await directorWS.connect(sessionId);
+                wsConnected.value = true;
+                wsReconnectCount.value = 0;
+                console.log('[场次控制台] WebSocket连接成功');
+
+                directorWS.on('player_status_change', (data) => {
+                    console.log('[场次控制台] 玩家状态变化:', data);
+                    loadPlayers();
+                });
+
+                directorWS.on('new_message', (data) => {
+                    console.log('[场次控制台] 新消息:', data);
+                    loadMessages();
+                });
+
+                directorWS.on('clue_unlocked', (data) => {
+                    console.log('[场次控制台] 线索已解锁:', data);
+                    ElNotification({
+                        title: '线索解锁',
+                        message: `玩家解锁了一条线索`,
+                        type: 'success',
+                        duration: 3000
+                    });
+                });
+
+                directorWS.on('game_status_change', (data) => {
+                    console.log('[场次控制台] 游戏状态变化:', data);
+                    loadSession();
+                });
+
+                directorWS.on('role_assigned', (data) => {
+                    console.log('[场次控制台] 角色分配:', data);
+                    loadPlayers();
+                });
+
+                directorWS.on('connected', () => {
+                    wsConnected.value = true;
+                });
+
+            } catch (e) {
+                console.error('[场次控制台] WebSocket连接失败:', e);
+                wsConnected.value = false;
+            }
+        };
+
         onMounted(() => {
             loadSession();
             loadPlayers();
             loadMessages();
-            refreshTimer = setInterval(() => {
-                loadPlayers();
-                loadMessages();
-            }, 5000);
+            initWebSocket();
         });
 
         watch(route, () => {
@@ -1118,6 +1168,7 @@ const SessionControl = {
                 loadSession();
                 loadPlayers();
                 loadMessages();
+                initWebSocket();
             }
         });
 
@@ -1126,11 +1177,13 @@ const SessionControl = {
             if (refreshTimer) {
                 clearInterval(refreshTimer);
             }
+            directorWS.close();
         });
 
         return {
             session, players, roles, clueTree, clueTreeRef, messages, activeTab,
             selectedPlayers, sendNotification, distributing, sendingMsg, msgForm,
+            wsConnected,
             statusText, statusType, clueTypeText, clueTypeColor, msgClass,
             hasAvailableRole, canDistribute, getRoleName, getRolePlayerCount,
             goBack, startGame, pauseGame, resumeGame, endGame,

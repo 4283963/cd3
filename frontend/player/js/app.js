@@ -100,21 +100,104 @@ const TabBarLayout = {
             <van-tabbar v-model="active" route safe-area-inset-bottom>
                 <van-tabbar-item icon="home-o" to="/">大厅</van-tabbar-item>
                 <van-tabbar-item icon="book-o" to="/script">剧本</van-tabbar-item>
-                <van-tabbar-item icon="search" to="/clues">线索</van-tabbar-item>
-                <van-tabbar-item icon="comment-o" to="/messages">消息</van-tabbar-item>
+                <van-tabbar-item icon="search" to="/clues">
+                    <template #icon>
+                        <div style="position: relative; display: inline-block;">
+                            <van-icon name="search" size="20" />
+                            <span v-if="newClueCount > 0" class="tab-badge">{{ newClueCount > 99 ? '99+' : newClueCount }}</span>
+                        </div>
+                    </template>
+                    线索
+                </van-tabbar-item>
+                <van-tabbar-item icon="comment-o" to="/messages">
+                    <template #icon>
+                        <div style="position: relative; display: inline-block;">
+                            <van-icon name="comment-o" size="20" />
+                            <span v-if="newMsgCount > 0" class="tab-badge">{{ newMsgCount > 99 ? '99+' : newMsgCount }}</span>
+                        </div>
+                    </template>
+                    消息
+                </van-tabbar-item>
             </van-tabbar>
         </div>
     `,
     setup() {
         const route = useRoute();
+        const router = useRouter();
         const active = ref(0);
+        const newClueCount = ref(0);
+        const newMsgCount = ref(0);
 
         watch(() => route.path, (path) => {
             const map = { '/': 0, '/script': 1, '/clues': 2, '/messages': 3 };
             active.value = map[path] ?? 0;
+            if (path === '/clues') {
+                newClueCount.value = 0;
+            }
+            if (path === '/messages') {
+                newMsgCount.value = 0;
+            }
         });
 
-        return { active };
+        const initWebSocket = async () => {
+            const playerInfo = JSON.parse(localStorage.getItem('player_info') || '{}');
+            if (!playerInfo.sessionId) return;
+
+            try {
+                await playerWS.connect(playerInfo.sessionId);
+
+                playerWS.on('new_clue', (data) => {
+                    console.log('[玩家端] 收到新线索:', data);
+                    newClueCount.value++;
+                    vant.Notify({
+                        type: 'success',
+                        message: '🎁 收到新线索！',
+                        duration: 3000
+                    });
+                });
+
+                playerWS.on('new_message', (data) => {
+                    console.log('[玩家端] 收到新消息:', data);
+                    newMsgCount.value++;
+                    vant.Notify({
+                        type: 'primary',
+                        message: data?.title || '📨 收到新消息',
+                        duration: 3000
+                    });
+                });
+
+                playerWS.on('game_status_change', (data) => {
+                    console.log('[玩家端] 游戏状态变化:', data);
+                    vant.Notify({
+                        type: 'warning',
+                        message: '游戏状态已更新',
+                        duration: 2000
+                    });
+                });
+
+                playerWS.on('role_assigned', (data) => {
+                    console.log('[玩家端] 角色已分配:', data);
+                    vant.Notify({
+                        type: 'success',
+                        message: '🎭 你的角色已分配！',
+                        duration: 3000
+                    });
+                });
+
+            } catch (e) {
+                console.error('[玩家端] WebSocket连接失败:', e);
+            }
+        };
+
+        onMounted(() => {
+            initWebSocket();
+        });
+
+        onUnmounted(() => {
+            playerWS.close();
+        });
+
+        return { active, newClueCount, newMsgCount };
     }
 };
 
@@ -454,7 +537,13 @@ const CluesPage = {
             loadClues();
         };
 
-        onMounted(loadClues);
+        onMounted(() => {
+            loadClues();
+
+            playerWS.on('new_clue', () => {
+                loadClues();
+            });
+        });
 
         return {
             clues, loading, parentId, showUnlockDialog, unlockPassword, currentClue,
@@ -668,14 +757,18 @@ const MessagesPage = {
             }
         };
 
-        let timer = null;
+        let newMsgHandler = null;
         onMounted(() => {
             loadMessages();
-            timer = setInterval(loadMessages, 10000);
+            newMsgHandler = playerWS.on('new_message', () => {
+                loadMessages();
+            });
         });
 
         onUnmounted(() => {
-            if (timer) clearInterval(timer);
+            if (newMsgHandler) {
+                newMsgHandler();
+            }
         });
 
         return { messages, loading, msgTypeClass, formatTime };

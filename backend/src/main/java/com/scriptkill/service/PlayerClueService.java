@@ -7,6 +7,8 @@ import com.scriptkill.entity.Clue;
 import com.scriptkill.entity.PlayerClue;
 import com.scriptkill.mapper.PlayerClueMapper;
 import com.scriptkill.vo.PlayerClueVO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,8 +21,13 @@ import java.util.stream.Collectors;
 @Service
 public class PlayerClueService extends ServiceImpl<PlayerClueMapper, PlayerClue> {
 
+    private static final Logger log = LoggerFactory.getLogger(PlayerClueService.class);
+
     @Autowired
     private ClueService clueService;
+
+    @Autowired
+    private WebSocketPushService webSocketPushService;
 
     public List<PlayerClue> getPlayerClues(Long playerId, Long sessionId) {
         return baseMapper.selectByPlayerIdAndSessionId(playerId, sessionId);
@@ -104,22 +111,30 @@ public class PlayerClueService extends ServiceImpl<PlayerClueMapper, PlayerClue>
         if (clue == null) {
             throw new BusinessException("线索不存在");
         }
+        boolean unlocked = false;
         if (clue.getUnlockPassword() == null || clue.getUnlockPassword().isEmpty()) {
             pc.setIsUnlocked(1);
             pc.setUnlockTime(LocalDateTime.now());
             updateById(pc);
-            return true;
-        }
-        if (clue.getUnlockPassword().equals(password)) {
+            unlocked = true;
+        } else if (clue.getUnlockPassword().equals(password)) {
             pc.setIsUnlocked(1);
             pc.setUnlockTime(LocalDateTime.now());
             updateById(pc);
-            return true;
+            unlocked = true;
         }
-        return false;
+        if (unlocked) {
+            try {
+                webSocketPushService.pushClueUnlocked(pc.getSessionId(), playerId, clueId);
+            } catch (Exception e) {
+                log.warn("线索解锁WebSocket推送失败: playerId={}, clueId={}", playerId, clueId, e);
+            }
+        }
+        return unlocked;
     }
 
     public void distributeClue(Long sessionId, Long clueId, List<Long> playerIds, Long directorId) {
+        List<Long> newPlayers = new ArrayList<>();
         for (Long playerId : playerIds) {
             QueryWrapper<PlayerClue> wrapper = new QueryWrapper<>();
             wrapper.eq("player_id", playerId);
@@ -134,6 +149,12 @@ public class PlayerClueService extends ServiceImpl<PlayerClueMapper, PlayerClue>
                 pc.setDistributedBy(directorId);
                 pc.setDistributeTime(LocalDateTime.now());
                 save(pc);
+                newPlayers.add(playerId);
+                try {
+                    webSocketPushService.pushNewClue(sessionId, java.util.Collections.singletonList(playerId), pc);
+                } catch (Exception e) {
+                    log.warn("分发线索WebSocket推送失败: playerId={}, clueId={}", playerId, clueId, e);
+                }
             }
         }
     }

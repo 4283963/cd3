@@ -1,10 +1,7 @@
 package com.scriptkill.common;
 
-import lombok.Data;
-
 import java.io.Serializable;
 
-@Data
 public class BusinessException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
@@ -18,6 +15,14 @@ public class BusinessException extends RuntimeException {
 
     public BusinessException(Integer code, String message) {
         super(message);
+        this.code = code;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public void setCode(Integer code) {
         this.code = code;
     }
 }

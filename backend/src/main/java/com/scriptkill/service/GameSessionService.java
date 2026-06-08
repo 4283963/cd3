@@ -11,6 +11,8 @@ import com.scriptkill.entity.Script;
 import com.scriptkill.entity.SysAdmin;
 import com.scriptkill.mapper.GameSessionMapper;
 import com.scriptkill.vo.GameSessionVO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,11 @@ import java.util.stream.Collectors;
 
 @Service
 public class GameSessionService extends ServiceImpl<GameSessionMapper, GameSession> {
+
+    private static final Logger log = LoggerFactory.getLogger(GameSessionService.class);
+
+    @Autowired
+    private WebSocketPushService webSocketPushService;
 
     @Autowired
     private ScriptService scriptService;
@@ -112,7 +119,15 @@ public class GameSessionService extends ServiceImpl<GameSessionMapper, GameSessi
         session.setStatus(1);
         session.setStartTime(LocalDateTime.now());
         session.setCurrentStage("playing");
-        return updateById(session);
+        boolean result = updateById(session);
+        if (result) {
+            try {
+                webSocketPushService.pushGameStatusChange(sessionId, "playing");
+            } catch (Exception e) {
+                log.warn("游戏状态WebSocket推送失败: sessionId={}", sessionId, e);
+            }
+        }
+        return result;
     }
 
     public boolean endSession(Long sessionId) {
@@ -122,7 +137,15 @@ public class GameSessionService extends ServiceImpl<GameSessionMapper, GameSessi
         }
         session.setStatus(2);
         session.setEndTime(LocalDateTime.now());
-        return updateById(session);
+        boolean result = updateById(session);
+        if (result) {
+            try {
+                webSocketPushService.pushGameStatusChange(sessionId, "ended");
+            } catch (Exception e) {
+                log.warn("游戏状态WebSocket推送失败: sessionId={}", sessionId, e);
+            }
+        }
+        return result;
     }
 
     public boolean pauseSession(Long sessionId) {
@@ -134,7 +157,15 @@ public class GameSessionService extends ServiceImpl<GameSessionMapper, GameSessi
             throw new BusinessException("只能暂停进行中的游戏");
         }
         session.setStatus(3);
-        return updateById(session);
+        boolean result = updateById(session);
+        if (result) {
+            try {
+                webSocketPushService.pushGameStatusChange(sessionId, "paused");
+            } catch (Exception e) {
+                log.warn("游戏状态WebSocket推送失败: sessionId={}", sessionId, e);
+            }
+        }
+        return result;
     }
 
     public boolean resumeSession(Long sessionId) {
@@ -146,6 +177,14 @@ public class GameSessionService extends ServiceImpl<GameSessionMapper, GameSessi
             throw new BusinessException("只能恢复已暂停的游戏");
         }
         session.setStatus(1);
-        return updateById(session);
+        boolean result = updateById(session);
+        if (result) {
+            try {
+                webSocketPushService.pushGameStatusChange(sessionId, "playing");
+            } catch (Exception e) {
+                log.warn("游戏状态WebSocket推送失败: sessionId={}", sessionId, e);
+            }
+        }
+        return result;
     }
 }
